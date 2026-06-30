@@ -1,71 +1,83 @@
-pipeline {
+pipeline{
+    //Directives
     agent any
-
     tools {
         maven 'maven'
     }
 
+    // directive
+    environment {
+        ArtifactId = readMavenPom().getArtifactId()
+        Version = readMavenPom().getVersion()
+        GroupId = readMavenPom().getGroupId()
+        Name = readMavenPom().getName()
+    }
+
     stages {
+        // Specify various stage with in stages
 
-        stage('Init POM variables') {
-            steps {
-                script {
-                    def pom = readMavenPom file: 'pom.xml'
-                    env.ArtifactId = pom.artifactId
-                    env.Version    = pom.version
-                    env.GroupId    = pom.groupId
-                    env.Name       = pom.name
-                }
-            }
-        }
-
-        stage('Build') {
+        // stage 1. Build
+        stage ('Build'){
             steps {
                 sh 'mvn clean install package'
             }
         }
 
-        stage('Test') {
+        // Stage2 : Testing
+        stage ('Test'){
             steps {
-                echo 'testing...'
+                echo ' testing......'
+
             }
         }
 
+        // Publish the artefact on Nexus
         stage('Publish to Nexus') {
             steps {
                 script {
-                    def NexusRepo = env.Version.endsWith("SNAPSHOT") ? "Repositories-SNAPSHOT" : "Repositories-RELEASE"
-
-                    nexusArtifactUploader artifacts: [[
-                        artifactId: env.ArtifactId,
-                        classifier: '',
-                        file: "target/${env.ArtifactId}-${env.Version}.war",
-                        type: 'war'
-                    ]],
-                    credentialsId: '410c40c1-e8de-4f96-b33d-78dc5e076e01',
-                    groupId: env.GroupId,
-                    nexusUrl: '172.20.10.87:8081',
-                    nexusVersion: 'nexus3',
-                    protocol: 'http',
-                    repository: NexusRepo,
-                    version: env.Version
+                    def NexusRepo = Version.endsWith("SNAPSHOT") ? "Repositories-SNAPSHOT" : "Repositories-RELEASE"
+                    nexusArtifactUploader artifacts: [[artifactId: "${ArtifactId}", classifier: '', file: "target/${ArtifactId}-${Version}.war", type: 'war']], 
+                    credentialsId: '410c40c1-e8de-4f96-b33d-78dc5e076e01', 
+                    groupId: "${GroupId}", 
+                    nexusUrl: '172.20.10.87:8081', 
+                    nexusVersion: 'nexus3', 
+                    protocol: 'http', 
+                    repository: "${NexusRepo}", 
+                    version: "${Version}"
                 }
             }
         }
 
+        //Print some information
         stage('Print Environment variables') {
             steps {
-                echo "Artifact ID: ${env.ArtifactId}"
-                echo "Version: ${env.Version}"
-                echo "GroupId: ${env.GroupId}"
-                echo "Name: ${env.Name}"
+                echo "Artifact ID is '${ArtifactId}'"
+                echo "Version ID is '${Version}'"
+                echo "GroupId is '${GroupId}'"
+                echo "Name ID is '${Name}'"
             }
         }
 
-        stage('Deploy') {
+        stage ('Deploy'){
             steps {
-                echo 'deploying...'
+                echo ' deploying......'
+
             }
         }
+
+        // Stage3 : Publish the source code to Sonarqube
+        // stage ('Sonarqube Analysis'){
+        //     steps {
+        //         echo ' Source code published to Sonarqube for SCA......'
+        //         withSonarQubeEnv('sonarqube'){ // You can override the credential to be used
+        //              sh 'mvn sonar:sonar'
+        //         }
+
+        //     }
+        // }
+
+        
+        
     }
+
 }
