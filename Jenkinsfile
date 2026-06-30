@@ -5,6 +5,14 @@ pipeline{
         maven 'maven'
     }
 
+    // directive
+    environment {
+        ArtifactId = readMavenPom().getArtifactId()
+        Version = readMavenPom().getVersion()
+        GroupId = readMavenPom().getGroupId()
+        Name = readMavenPom().getName()
+    }
+
     stages {
         // Specify various stage with in stages
 
@@ -26,7 +34,27 @@ pipeline{
         // Publish the artefact on Nexus
         stage('Publish to Nexus') {
             steps {
-                nexusArtifactUploader artifacts: [[artifactId: 'VinayDevOpsLab', classifier: '', file: 'target/VinayDevOpsLab-0.0.4-SNAPSHOT.war', type: 'war']], credentialsId: '410c40c1-e8de-4f96-b33d-78dc5e076e01', groupId: 'com.vinaysdevopslab', nexusUrl: '172.20.10.87:8081', nexusVersion: 'nexus3', protocol: 'http', repository: 'Repositories-SNAPSHOT', version: '0.0.4-SNAPSHOT'
+                script {
+                    def NexusRepo = Version.endsWith("SNAPSHOT") ? "Repositories-SNAPSHOT" : "Repositories-RELEASE"
+                    nexusArtifactUploader artifacts: [[artifactId: "${ArtifactId}", classifier: '', file: "target/${ArtifactId}-${Version}.war", type: 'war']], 
+                    credentialsId: '410c40c1-e8de-4f96-b33d-78dc5e076e01', 
+                    groupId: "${GroupId}", 
+                    nexusUrl: '172.20.10.87:8081', 
+                    nexusVersion: 'nexus3', 
+                    protocol: 'http', 
+                    repository: "${NexusRepo}", 
+                    version: "${Version}"
+                }
+            }
+        }
+
+        //Print some information
+        stage('Print Environment variables') {
+            steps {
+                echo "Artifact ID is '${ArtifactId}'"
+                echo "Version ID is '${Version}'"
+                echo "GroupId is '${GroupId}'"
+                echo "Name ID is '${Name}'"
             }
         }
 
